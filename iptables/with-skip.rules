@@ -1,0 +1,63 @@
+## ssdfw test ruleset example:
+##  + DNATed service in LAN: public tcp:82 -> lan tcp:80 with reflection
+##  + docker service on host: `docker run -p 81:80 nginx`
+##  + host services: ssh, https, http
+##  + SNAT: eth1 to internet
+##  + route: eth1 <---> 172.16.6/24 @eth0
+
+#                               |------------|
+# internet<------>||            |nginx 80,443|
+#                 ||<---eth0--->| ssdfw HOST |<---eth1--->LAN
+#      LAN<------>||            |dnat 82 --->|--->    (192.168.71/24)
+#  (172.16.6/24)                |docker 81   |
+#                               |------------|
+
+no_ipv6 --allow-out # only outgoing for ipv6
+
+# --------------- NAT IN ($nat_in -j DNAT )------------------------------------
+$nat_in -j DNAT -p tcp --dport 82 --to-destination 192.168.71.42:80
+# -----------------------------------------------------------------------------
+
+# --------------- IN ($in -j check_state,allow,ignore,skip,deny,reject) -------
+$in -j allow    -i lo
+$in -j allow    -i eth1
+$in -j skip     -i eth0 -s 172.16.6/24         # allow from 172.16.6/24
+$in -j deny     -i eth0 -s "$private_networks" # drop any private addresses
+$in -j check_state                             # allow established connections
+# sanitize incoming traffic
+$in -j deny     -p tcp -m conntrack --ctstate INVALID # tcp scans
+$in -j deny     -p tcp ! --syn -m conntrack --ctstate NEW # tcp ack scan
+$in -j reject   -p tcp --dport 113 # deny ident
+$in -j allow    -p icmp --icmp-type 0  # echo reply
+$in -j allow    -p icmp --icmp-type 3  # destination unreachable
+$in -j allow    -p icmp --icmp-type 8  # echo request
+$in -j allow    -p icmp --icmp-type 11 # ttl exceeded"
+$in -j allow    -p icmp --icmp-type 12 # ip bad header"
+$in -j deny     -p icmp                # dangerous icmp
+$in -j deny     -m conntrack ! --ctstate NEW # only new connections accepted
+# services (local, docker, DNATed)
+$in -j allow    -p tcp --dport 22                      # ssh
+$in -j allow    -p tcp -m multiport --dports 443,80:82 # web services
+# -----------------------------------------------------------------------------
+
+# --------------- IP FORWARD ($fwd -j allow,ignore,skip,deny,reject) ----------
+# eth1: allow internet access and 172.16.6/24 @eth0
+$fwd -j allow   -i eth0 -s 172.16.6/24 -o eth1 # eth0->eth1
+$fwd -j skip    -i eth1 -d 172.16.6/24         # eth1->eth0 (skip next rule)
+$fwd -j deny    -i eth1 -d "$private_networks"  # deny any private networks
+$fwd -j allow   -i eth1                         # allow internet access
+# -----------------------------------------------------------------------------
+
+# --------------- OUT ($out -j ACCEPT,DROP) -----------------------------------
+$out -j ACCEPT
+$out -m comment --comment "Dropped OUT"
+# -----------------------------------------------------------------------------
+
+# ----------------NAT OUT ($nat_out -j MASQUERADE,SNAT)------------------------
+$nat_out -j RETURN     -i eth1 -o eth0 -d 172.16.6/24 # exclude from NAT
+$nat_out -j MASQUERADE -i eth1 -o eth0                 # NAT to internet
+
+# reflection: access DNATed ports @eth1 LAN (public port 82, lan port 80)
+$nat_out -j MASQUERADE -i eth1 -o eth1 -p tcp -m conntrack --ctorigdstport 82
+#$nat_out -j MASQUERADE -i eth1-o eth1 -p tcp --dport 80 # alternative way
+# -----------------------------------------------------------------------------

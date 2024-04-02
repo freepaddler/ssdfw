@@ -1,0 +1,33 @@
+## default ruleset (aka default for nftables)
+
+no_ipv6 --allow-out
+
+# --------------- NAT IN ($nat_in -j DNAT) ------------------------------------
+# -----------------------------------------------------------------------------
+
+# --------------- IN ($in -j check_state,allow,ignore,skip,deny,reject) -------
+$in -j allow    -i lo
+$in -j check_state # (MUST appear at least once in IN section)
+$in -j deny     -p tcp -m conntrack --ctstate INVALID # tcp scans
+$in -j deny     -p tcp ! --syn -m conntrack --ctstate NEW # tcp ack scan
+$in -j reject   -p tcp --dport 113 # deny ident
+$in -j allow    -p icmp --icmp-type 0  # echo reply
+$in -j allow    -p icmp --icmp-type 3  # destination unreachable
+$in -j allow    -p icmp --icmp-type 8  # echo request
+$in -j allow    -p icmp --icmp-type 11 # ttl exceeded"
+$in -j allow    -p icmp --icmp-type 12 # ip bad header"
+$in -j deny     -p icmp # dangerous icmp
+$in -j deny     -m conntrack ! --ctstate NEW # only new connections accepted
+$in -j allow    -p tcp --dport 22 # ssh
+# -----------------------------------------------------------------------------
+
+# --------------- IP FORWARD ($fwd -j allow,ignore,skip,deny,reject) ----------
+# -----------------------------------------------------------------------------
+
+# --------------- OUT ($out -j ACCEPT,DROP) -----------------------------------
+$out -j ACCEPT
+$out -m comment --comment "Dropped OUT"
+# -----------------------------------------------------------------------------
+
+# ----------------NAT OUT ($nat_out -j MASQUERADE,SNAT)------------------------
+# -----------------------------------------------------------------------------

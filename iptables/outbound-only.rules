@@ -1,0 +1,6 @@
+## minimal ruleset (outbound only)
+
+no_ipv6
+
+$in  -j check_state
+$out -j ACCEPT

@@ -1,0 +1,12 @@
+## ssdfw test ruleset example:
+##  + SNAT: eth1 to internet
+
+# --------------- IP FORWARD ($fwd -j allow,ignore,skip,deny,reject) ----------
+# eth1: allow internet access
+$fwd -j deny    -i eth1 -d "$private_networks"  # deny any private networks
+$fwd -j allow   -i eth1                         # allow internet access
+# -----------------------------------------------------------------------------
+
+# ----------------NAT OUT ($nat_out -j MASQUERADE,SNAT)------------------------
+$nat_out -j MASQUERADE -i eth1 -o eth0           # NAT to internet
+# -----------------------------------------------------------------------------

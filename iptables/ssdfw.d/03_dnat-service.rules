@@ -1,0 +1,16 @@
+## ssdfw test ruleset example:
+##  + DNATed service in LAN: public tcp:82 -> lan tcp:80 with reflection
+
+# --------------- NAT IN ($nat_in -j DNAT)-------------------------------------
+$nat_in -j DNAT -p tcp --dport 82 --to-destination 192.168.71.42:80
+# -----------------------------------------------------------------------------
+
+# --------------- IN ($in -j check_state,allow,ignore,skip,deny,reject) -------
+$in -j allow    -p tcp --dport 82  # dnated service @LAN
+# -----------------------------------------------------------------------------
+
+# ----------------NAT OUT ($nat_out -j MASQUERADE,SNAT)------------------------
+# reflection: access DNATed ports @eth1 LAN (public port 82, lan port 80)
+$nat_out -j MASQUERADE -i eth1 -o eth1 -p tcp -m conntrack --ctorigdstport 82
+#$nat_out -j MASQUERADE -i eth1-o eth1 -p tcp --dport 80 # alternative way
+# -----------------------------------------------------------------------------

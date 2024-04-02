@@ -1,0 +1,6 @@
+## ssdfw test ruleset example:
+##  + host services: ssh, https, http
+
+# --------------- IN ($in -j check_state,allow,ignore,skip,deny,reject) -------
+$in -j allow    -p tcp -m multiport --dports 443,80 # nginx @host
+# -----------------------------------------------------------------------------

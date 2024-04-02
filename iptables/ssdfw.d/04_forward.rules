@@ -1,0 +1,12 @@
+## ssdfw test ruleset example:
+##  + route: eth1 <---> 172.16.6/24 @eth0
+
+# --------------- IP FORWARD ($fwd -j allow,ignore,skip,deny,reject) ----------
+# eth1: allow internet access
+$fwd -j allow   -i eth0 -s 172.16.6/24 -o eth1    # eth0->eth1
+$fwd -j allow   -i eth1 -o eth0 -d 172.16.6/24    # eth1->eth0
+# -----------------------------------------------------------------------------
+
+# ----------------NAT OUT ($nat_out -j MASQUERADE,SNAT)------------------------
+$nat_out -j RETURN -i eth1 -o eth0 -d 172.16.6/24 # exclude from NAT
+# -----------------------------------------------------------------------------

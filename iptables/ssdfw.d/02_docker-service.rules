@@ -1,0 +1,6 @@
+## ssdfw test ruleset example:
+##  + docker service on host: `docker run -p 81:80 nginx`
+
+# --------------- IN ($in -j check_state,allow,ignore,skip,deny,reject) -------
+$in -j allow    -p tcp --dport 81  # docker service @host
+# -----------------------------------------------------------------------------
