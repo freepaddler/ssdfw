@@ -8,15 +8,17 @@ local_ruleset() {
 
 no_ipv6 --allow-out
 
-# --------------- NAT IN ($nat_in -j DNAT) ------------------------------------
+# --------------- NAT IN ($nat_in -j DNAT -------------------------------------
+$nat_in -j DNAT -p tcp --dport 82 --to-destination 192.168.71.42:80
 # -----------------------------------------------------------------------------
 
 # --------------- IN ($in -j check_state,allow,ignore,skip,deny,reject) -------
 $in -j allow    -i lo
+#$in -j allow    -i eth1
 $in -j check_state # (MUST appear at least once in IN section)
 $in -j deny     -p tcp -m conntrack --ctstate INVALID # tcp scans
 $in -j deny     -p tcp ! --syn -m conntrack --ctstate NEW # tcp ack scan
-$in -j reject   -p tcp --dport 113     # deny ident
+$in -j reject   -p tcp --dport 113 # deny ident
 $in -j allow    -p icmp --icmp-type 0  # echo reply
 $in -j allow    -p icmp --icmp-type 3  # destination unreachable
 $in -j allow    -p icmp --icmp-type 8  # echo request
@@ -25,9 +27,13 @@ $in -j allow    -p icmp --icmp-type 12 # ip bad header"
 $in -j deny     -p icmp # dangerous icmp
 $in -j deny     -m conntrack ! --ctstate NEW # only new connections accepted
 $in -j allow    -p tcp --dport 22 # ssh
+$in -j allow    -p tcp -m multiport --dports 443,80:82 # web
 # -----------------------------------------------------------------------------
 
 # --------------- IP FORWARD ($fwd -j allow,ignore,skip,deny,reject) ----------
+$fwd -j skip    -i eth1 -d 172.28.70/24
+$fwd -j deny    -i eth1 -d "$private_networks"
+$fwd -j allow   -i eth1
 # -----------------------------------------------------------------------------
 
 # --------------- OUT ($out -j ACCEPT,DROP) -----------------------------------
@@ -36,6 +42,11 @@ $out -m comment --comment "Dropped OUT"
 # -----------------------------------------------------------------------------
 
 # ----------------NAT OUT ($nat_out -j MASQUERADE,SNAT)------------------------
+$nat_out -j RETURN -i eth1 -o eth0 -s 192.168.71.43
+$nat_out -j MASQUERADE -i eth1 -o eth0
+# reflection: access DNATed ports from LAN
+#$nat_out -j MASQUERADE -i eth1 -o eth1 -p tcp --dport 80
+$nat_out -j MASQUERADE -i eth1 -o eth1 -p tcp -m conntrack --ctorigdstport 82
 # -----------------------------------------------------------------------------
 }
 
@@ -152,7 +163,7 @@ flush() {
     iptables -t nat -F nat_out                2>/dev/null
     iptables -t nat -X nat_out                2>/dev/null
 
-    echo "Done. Use 'ssdfw.sh flush_iptables' to flush ALL IPTABLES rules."
+    echo "Done. Use 'sshdfw.sh flush_iptables' to flush ALL IPTABLES rules."
 }
 
 # flush all iptables rules
@@ -279,7 +290,6 @@ $ipt -t mangle -F FORWARD
 # skip if mark is already set and DNATed
 $ipt -t mangle -A FORWARD -j ACCEPT -m conntrack --ctstate DNAT -m mark --mark 0xF0/0xF0
 $ipt -t mangle -A FORWARD -j unmark_skip # if last rule was skip
-# shellcheck disable=SC2034
 fwd="$ipt -t mangle -A FORWARD"
 
 # **** NAT
@@ -287,13 +297,11 @@ fwd="$ipt -t mangle -A FORWARD"
 $ipt -t nat -N nat_in 2>/dev/null || $ipt -t nat -F nat_in
 $ipt -t nat -D PREROUTING -j nat_in 2>/dev/null
 $ipt -t nat -I PREROUTING -j nat_in
-# shellcheck disable=SC2034
 nat_in="$ipt -t nat -A nat_in"
 # ******** POSTROUTING
 $ipt -t nat -N nat_out 2>/dev/null || $ipt -t nat -F nat_out
 $ipt -t nat -D POSTROUTING -j nat_out 2>/dev/null
 $ipt -t nat -I POSTROUTING -j nat_out
-# shellcheck disable=SC2034
 nat_out="$ipt -t nat -A nat_out"
 
 # **** FILTER
