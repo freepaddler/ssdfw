@@ -226,7 +226,7 @@ ipt="$(which iptables) -w 3" || {
 echo "Enabling ip forwarding... (place to sysctl.conf for persistence between reboots)"
 sysctl -w net.ipv4.ip_forward=1
 [ -f /etc/conf.d/iptables ] && \
-    sed -i 's/^(.*)IPFORWARD=(.*)$/IPFORWARD="yes"/g' /etc/conf.d/iptables
+    sed -ri 's/^(.*)IPFORWARD=(.*)$/IPFORWARD="yes"/g' /etc/conf.d/iptables
 
 private_networks="0.0.0.0/8,127.0.0.0/8"             # loopback
 private_networks="$private_networks,10.0.0.0/8"      # RFC 1918 private IP
