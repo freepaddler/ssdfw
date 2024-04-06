@@ -4,7 +4,9 @@
 ## first match hit
 set +x
 
-local_ruleset() {
+# shellcheck disable=SC2016
+default_ruleset='## default ssdfw ruleset (aka default for nftables)
+## see <https://github.com/freepaddler/ssdfw> for details
 
 no_ipv6 --allow-out
 
@@ -37,7 +39,8 @@ $out -m comment --comment "Dropped OUT"
 
 # ----------------NAT OUT ($nat_out -j MASQUERADE,SNAT)------------------------
 # -----------------------------------------------------------------------------
-}
+
+'
 
 # drop ipv6 in
 # shellcheck disable=SC2120
@@ -67,7 +70,7 @@ Simple Stateful Docker-friendly Firewall (ssdfw)
     Manages IPTABLES firewall applying rules from:
         - /etc/iptables/ssdfw.rules
         - /etc/iptables/ssdfw.d/*.rules
-        - if no files found, then ruleset from this script ($0)
+        - if none found, default ruleset is applied and saved to /etc/iptables/ssdfw.rules
 
     Running without command applies rules using 'iptables-apply' (if found) to be safe.
 
@@ -76,6 +79,8 @@ Simple Stateful Docker-friendly Firewall (ssdfw)
         list            list all ssdfw rules (iptables -L)
         flush           delete ssdfw rules, allow in and out
         flush_iptables  delete all iptables rules, allow in and out
+
+See <https://github.com/freepaddler/ssdfw> for details.
 
 EOF
 }
@@ -273,6 +278,7 @@ $ipt -t mangle -A reject -j MARK --set-mark 0xFC
 $ipt -t mangle -A reject -j ACCEPT
 # ******** PREROUTING
 $ipt -t mangle -F PREROUTING
+# shellcheck disable=SC2034
 in="$ipt -t mangle -A PREROUTING"
 # ******** FORWARD
 $ipt -t mangle -F FORWARD
@@ -325,6 +331,7 @@ $ipt -A DOCKER-USER -m comment --comment "Dropped IP FORWARD"
 $ipt -A DOCKER-USER -j DROP
 
 # ******** OUTPUT
+# shellcheck disable=SC2034
 out="$ipt -A OUTPUT"
 $ipt -F OUTPUT
 
@@ -343,8 +350,17 @@ for rf in /etc/iptables/ssdfw.d/*.rules; do
     }
 done
 if [ -z "$no_local" ]; then
-    echo "No rules files found. Applying default ruleset"
-    local_ruleset
+    echo "No rules files found. Applying default ruleset to /etc/iptables/ssdfw.rules"
+    mkdir -p /etc/iptables/ssdfw.d
+    echo "$default_ruleset" > /etc/iptables/ssdfw.rules
+    if [ -r /etc/iptables/ssdfw.rules ]; then
+        no_local="1"
+        echo "Applying rules from /etc/iptables/ssdfw.rules"
+        . /etc/iptables/ssdfw.rules
+    else
+        echo "Failed to apply default ruleset!"
+        exit 1
+    fi
 fi
 
 # set default policies
@@ -353,5 +369,6 @@ $ipt -P FORWARD DROP
 $ipt -P OUTPUT DROP
 
 echo
+echo "Don't forget to setup persistence over reboots for iptables!"
 echo "Rules applied. Use 'ssdfw.sh show' to view rules."
 echo

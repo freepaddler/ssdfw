@@ -116,3 +116,16 @@ I don't deal much with ipv6, that's why script does nothing with it. But some ma
 + works with bridged docker interfaces (docker+, br-+)
 + docker swarm mode is not tested
 
+## Persistent to reboots
+
+### Alpine Linux
+```sh
+apk add iptables
+ssdfw.sh
+rc-service iptables save
+rc-service ip6tables save
+rc-update add iptables 
+rc-update add ip6tables
+rc-service iptables start
+rc-service ip6tables start
+```
