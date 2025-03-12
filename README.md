@@ -10,7 +10,8 @@ This makes setup simple, straightforward and easy to manage. See examples in `ip
 
 ```shell
 git clone https://github.com/freepaddler/ssdfw
-sudo cp ssdfw/ssdfw.sh /usr/local/bin
+sudo install -m 755 ssdfw/ssdfw.sh /usr/local/bin/ssdfw
+sudo mkdir -p /etc/iptables
 sudo cp ssdfw/iptables/ssdfw.rules /etc/iptables/
 ```
 
@@ -54,7 +55,7 @@ Filters traffic to host itself (including DNATed ports for docker). Use instead 
 + directive `$in` to add rule to the section
 + first match target applied (allow, deny, reject, ignore)
 + custom targets:
-  + check-state: special directive, MUST exist in IN section at least once
+  + check-state: special directive, MUST exist in `IN` section at least once
     + it ACCEPTs ESTABLISHED and RELATED packets
     + it checks packet destination, if destination is not host itself, then IN processing stops and packet enters IP FORWARD section
   + allow = ACCEPT
@@ -128,4 +129,11 @@ rc-update add iptables
 rc-update add ip6tables
 rc-service iptables start
 rc-service ip6tables start
+```
+
+### Debian
+```shell
+sudo apt install iptables iptables-persistent
+ssdfw
+systemctl status netfilter-persistent
 ```

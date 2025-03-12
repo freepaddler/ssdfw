@@ -12,5 +12,5 @@ $in -j allow    -p tcp --dport 82  # dnated service @LAN
 # ----------------NAT OUT ($nat_out -j MASQUERADE,SNAT)------------------------
 # reflection: access DNATed ports @eth1 LAN (public port 82, lan port 80)
 $nat_out -j MASQUERADE -i eth1 -o eth1 -p tcp -m conntrack --ctorigdstport 82
-#$nat_out -j MASQUERADE -i eth1-o eth1 -p tcp --dport 80 # alternative way
+#$nat_out -j MASQUERADE -i eth1 -o eth1 -p tcp --dport 80 # alternative way
 # -----------------------------------------------------------------------------
