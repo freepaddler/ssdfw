@@ -13,4 +13,6 @@ $in -j allow    -p tcp --dport 82  # dnated service @LAN
 # reflection: access DNATed ports @eth1 LAN (public port 82, lan port 80)
 $nat_out -j MASQUERADE -i eth1 -o eth1 -p tcp -m conntrack --ctorigdstport 82
 #$nat_out -j MASQUERADE -i eth1 -o eth1 -p tcp --dport 80 # alternative way
+# asymmetric DNAT: when lan server does not have this server as default gw
+$nat_out -j MASQUERADE -o eth1 -p tcp -m conntrack --ctorigdstport 82
 # -----------------------------------------------------------------------------
