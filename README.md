@@ -13,6 +13,7 @@ git clone https://github.com/freepaddler/ssdfw
 sudo install -m 755 ssdfw/ssdfw.sh /usr/local/bin/ssdfw
 sudo mkdir -p /etc/iptables
 sudo cp ssdfw/iptables/ssdfw.rules /etc/iptables/
+sudo install -D -m 644 ssdfw/systemd/ssdfw.service /etc/systemd/system/ssdfw.service
 ```
 
 ## Setup and run
@@ -23,8 +24,10 @@ Place rules in:
 + if no of these files found, rules are applied from script itself (yes, they may be also managed)
 
 Run `ssdfw.sh` without args to apply rules. Script will try to use 'iptables-apply' (if found) to be failsafe.
+Use `ssdfw apply` to apply rules directly without interactive `iptables-apply` prompts, for example from systemd.
 
 Subcommands (1st arg):
++ `apply`           apply rules directly, without iptables-apply prompts
 + `show`            show all ssdfw rules (iptables -S)
 + `list`            list all ssdfw rules (iptables -L)
 + `flush`           delete ssdfw rules, allow in and out
@@ -133,7 +136,12 @@ rc-service ip6tables start
 
 ### Debian
 ```shell
-sudo apt install iptables iptables-persistent
-ssdfw
-systemctl status netfilter-persistent
+sudo apt install iptables
+sudo install -D -m 644 ssdfw/systemd/ssdfw.service /etc/systemd/system/ssdfw.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now ssdfw.service
+systemctl status ssdfw.service
 ```
+
+`iptables-persistent` is not required for ssdfw. The systemd unit applies the rule files at boot with `ssdfw apply`, so `/etc/iptables/ssdfw.rules` and `/etc/iptables/ssdfw.d/*.rules` remain the source of truth instead of an `iptables-save` snapshot.
+After changing rule files, run `sudo systemctl reload ssdfw.service` to apply them again.

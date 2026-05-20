@@ -75,6 +75,7 @@ Simple Stateful Docker-friendly Firewall (ssdfw)
     Running without command applies rules using 'iptables-apply' (if found) to be safe.
 
     Commands:
+        apply           apply rules directly, without iptables-apply prompts
         show            show all ssdfw rules (iptables -S)
         list            list all ssdfw rules (iptables -L)
         flush           delete ssdfw rules, allow in and out
@@ -196,6 +197,8 @@ case $1 in
         $1
         exit 0
         ;;
+    apply)
+        ;;
     "") ;;
     *)
         usage
@@ -204,13 +207,13 @@ case $1 in
 esac
 
 # safe run applying rules
-grep -q "iptables-apply" "/proc/$PPID/cmdline" || {
+if [ -z "$1" ] && ! grep -q "iptables-apply" "/proc/$PPID/cmdline"; then
     if which iptables-apply >/dev/null; then
         echo "Playing safe, running as: 'iptables-apply -c $0'"
         echo
         exec iptables-apply -c "$0"
     fi
-}
+fi
 
 ipt="$(which iptables) -w 3" || {
     echo "ERROR: no 'iptables' executable found in PATH"

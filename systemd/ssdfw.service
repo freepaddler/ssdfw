@@ -1,0 +1,17 @@
+[Unit]
+Description=Simple Stateful Docker-friendly Firewall
+Documentation=https://github.com/freepaddler/ssdfw
+DefaultDependencies=no
+Wants=network-pre.target
+Before=network-pre.target shutdown.target
+After=local-fs.target
+Conflicts=shutdown.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/ssdfw apply
+ExecReload=/usr/local/bin/ssdfw apply
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
