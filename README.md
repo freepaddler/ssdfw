@@ -75,6 +75,15 @@ $in -j skip -d 10.1.2.3
 $in -j deny -d 10/8
 ```
 
+#### sshguard
+`ssdfw` creates a filter table `sshguard` chain and hooks it into `INPUT` before accepting packets marked as allowed. Do not add `sshguard` to `$in`; `$in` rules are added to the mangle table. Just allow SSH in the `IN` section:
+
+```shell
+$in -j allow -p tcp --dport 22
+```
+
+If `sshguard` is installed and manages the `sshguard` chain, it will be applied by the built-in `INPUT` hook.
+
 ### Section IP FORWARD
 Filters forwarded traffic (not dedicated to host itself), excluding DNATed ports (docker). Use instead of filter FORWARD
 
