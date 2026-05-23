@@ -92,11 +92,14 @@ Filters forwarded traffic (not dedicated to host itself), excluding DNATed ports
 + directive `$fwd` to add rule to the section
 + first match target applied (allow, deny, reject, ignore)
 + custom targets:
+    + check_fwd_state: optional directive, put it before forward allow/deny rules to ACCEPT ESTABLISHED and RELATED packets
     + allow = ACCEPT
     + deny = DROP
     + reject = REJECT (with-reset for tcp)
     + ignore = leave chain without allow/deny decision
     + skip: skip next matching rule for this packet
+
+`check_fwd_state` is not added automatically. DNATed/docker traffic that was already decided in the `IN` section is protected by built-in rules before user `$fwd` rules are evaluated.
 
 ### Section OUT
 Filter host outgoing traffic

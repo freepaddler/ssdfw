@@ -29,7 +29,7 @@ $in -j deny     -m conntrack ! --ctstate NEW # only new connections accepted
 $in -j allow    -p tcp --dport 22 # ssh
 # -----------------------------------------------------------------------------
 
-# --------------- IP FORWARD ($fwd -j allow,ignore,skip,deny,reject) ----------
+# --------------- IP FORWARD ($fwd -j check_fwd_state,allow,ignore,skip,deny,reject)
 # -----------------------------------------------------------------------------
 
 # --------------- OUT ($out -j ACCEPT,DROP) -----------------------------------
@@ -260,6 +260,11 @@ $ipt -t mangle -A check_state -j ACCEPT -m mark --mark 0xFA/0xFA # accept statef
 # if destination is not host itself (+DNATed services), then IN rules are not applicable
 $ipt -t mangle -A check_state -j MARK --set-mark 0x0 -m addrtype ! --dst-type LOCAL
 $ipt -t mangle -A check_state -j ACCEPT -m addrtype ! --dst-type LOCAL
+# check_fwd_state
+$ipt -t mangle -N check_fwd_state 2>/dev/null || $ipt -t mangle -F check_fwd_state
+$ipt -t mangle -A check_fwd_state -g unmark_skip -m mark --mark 0x500/0x500
+$ipt -t mangle -A check_fwd_state -j MARK --set-mark 0xFA -m conntrack --ctstate ESTABLISHED,RELATED
+$ipt -t mangle -A check_fwd_state -j ACCEPT -m mark --mark 0xFA/0xFA # accept stateful
 # allow = ACCEPT
 $ipt -t mangle -N allow 2>/dev/null || $ipt -t mangle -F allow
 $ipt -t mangle -A allow -g unmark_skip -m mark --mark 0x500/0x500

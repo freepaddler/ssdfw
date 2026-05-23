@@ -40,8 +40,9 @@ $in -j allow    -p tcp --dport 22                      # ssh
 $in -j allow    -p tcp -m multiport --dports 443,80:82 # web services
 # -----------------------------------------------------------------------------
 
-# --------------- IP FORWARD ($fwd -j allow,ignore,skip,deny,reject) ----------
+# --------------- IP FORWARD ($fwd -j check_fwd_state,allow,ignore,skip,deny,reject)
 # eth1: allow internet access and 172.16.6/24 @eth0
+$fwd -j check_fwd_state                         # allow established connections
 $fwd -j allow   -i eth0 -s 172.16.6/24 -o eth1 # eth0->eth1
 $fwd -j skip    -i eth1 -d 172.16.6/24         # eth1->eth0 (skip next rule)
 $fwd -j deny    -i eth1 -d "$private_networks"  # deny any private networks
