@@ -68,9 +68,12 @@ usage() {
 Simple Stateful Docker-friendly Firewall (ssdfw)
 
     Manages IPTABLES firewall applying rules from:
-        - /etc/iptables/ssdfw.rules
-        - /etc/iptables/ssdfw.d/*.rules
-        - if none found, default ruleset is applied and saved to /etc/iptables/ssdfw.rules
+        - /etc/ssdfw/rules
+        - /etc/ssdfw/rules.d/*.rules
+        - if /etc/ssdfw does not exist:
+          /etc/iptables/ssdfw.rules
+          /etc/iptables/ssdfw.d/*.rules
+        - if none found, default ruleset is applied and saved to /etc/ssdfw/rules
 
     Running without command applies rules using 'iptables-apply' (if found) to be safe.
 
@@ -344,27 +347,45 @@ out="$ipt -A OUTPUT"
 $ipt -F OUTPUT
 
 no_local=""
-if [ -r /etc/iptables/ssdfw.rules ]; then
-    no_local="1"
-    echo "Applying rules from /etc/iptables/ssdfw.rules"
-    . /etc/iptables/ssdfw.rules
-fi
-for rf in /etc/iptables/ssdfw.d/*.rules; do
-    [ -f "$rf" ] && {
+
+apply_rule_file() {
+    rule_file="$1"
+    if [ -r "$rule_file" ]; then
         no_local="1"
-        echo "Applying rules from $rf"
+        echo "Applying rules from $rule_file"
         # shellcheck disable=SC1090
-        . "$rf"
-    }
-done
+        . "$rule_file"
+    fi
+}
+
+apply_rule_dir() {
+    rule_dir="$1"
+    for rf in "$rule_dir"/*.rules; do
+        [ -f "$rf" ] && {
+            no_local="1"
+            echo "Applying rules from $rf"
+            # shellcheck disable=SC1090
+            . "$rf"
+        }
+    done
+}
+
+if [ -d /etc/ssdfw ]; then
+    apply_rule_file "/etc/ssdfw/rules"
+    apply_rule_dir "/etc/ssdfw/rules.d"
+else
+    apply_rule_file "/etc/iptables/ssdfw.rules"
+    apply_rule_dir "/etc/iptables/ssdfw.d"
+fi
+
 if [ -z "$no_local" ]; then
-    echo "No rules files found. Applying default ruleset to /etc/iptables/ssdfw.rules"
-    mkdir -p /etc/iptables/ssdfw.d
-    echo "$default_ruleset" > /etc/iptables/ssdfw.rules
-    if [ -r /etc/iptables/ssdfw.rules ]; then
+    echo "No rules files found. Applying default ruleset to /etc/ssdfw/rules"
+    mkdir -p /etc/ssdfw/rules.d
+    echo "$default_ruleset" > /etc/ssdfw/rules
+    if [ -r /etc/ssdfw/rules ]; then
         no_local="1"
-        echo "Applying rules from /etc/iptables/ssdfw.rules"
-        . /etc/iptables/ssdfw.rules
+        echo "Applying rules from /etc/ssdfw/rules"
+        . /etc/ssdfw/rules
     else
         echo "Failed to apply default ruleset!"
         exit 1

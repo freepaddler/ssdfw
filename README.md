@@ -11,17 +11,22 @@ This makes setup simple, straightforward and easy to manage. See examples in `ip
 ```shell
 git clone https://github.com/freepaddler/ssdfw
 sudo install -m 755 ssdfw/ssdfw.sh /usr/local/bin/ssdfw
-sudo mkdir -p /etc/iptables
-sudo cp ssdfw/iptables/ssdfw.rules /etc/iptables/
+sudo mkdir -p /etc/ssdfw/rules.d
+sudo cp ssdfw/iptables/ssdfw.rules /etc/ssdfw/rules
 sudo install -D -m 644 ssdfw/systemd/ssdfw.service /etc/systemd/system/ssdfw.service
 ```
 
 ## Setup and run
 
 Place rules in:
++ `/etc/ssdfw/rules`
++ `/etc/ssdfw/rules.d/*.rules`
+
+If `/etc/ssdfw` does not exist, legacy paths are used instead:
 + `/etc/iptables/ssdfw.rules`
 + `/etc/iptables/ssdfw.d/*.rules`
-+ if no of these files found, rules are applied from script itself (yes, they may be also managed)
+
+If no rule files are found in the selected location, rules are applied from script itself (yes, they may be also managed).
 
 Run `ssdfw.sh` without args to apply rules. Script will try to use 'iptables-apply' (if found) to be failsafe.
 Use `ssdfw apply` to apply rules directly without interactive `iptables-apply` prompts, for example from systemd.
@@ -155,5 +160,5 @@ sudo systemctl enable --now ssdfw.service
 systemctl status ssdfw.service
 ```
 
-`iptables-persistent` is not required for ssdfw. The systemd unit applies the rule files at boot with `ssdfw apply`, so `/etc/iptables/ssdfw.rules` and `/etc/iptables/ssdfw.d/*.rules` remain the source of truth instead of an `iptables-save` snapshot.
+`iptables-persistent` is not required for ssdfw. The systemd unit applies the rule files at boot with `ssdfw apply`, so `/etc/ssdfw/rules` and `/etc/ssdfw/rules.d/*.rules` remain the source of truth instead of an `iptables-save` snapshot. Legacy `/etc/iptables/ssdfw.rules` and `/etc/iptables/ssdfw.d/*.rules` are used only when `/etc/ssdfw` does not exist.
 After changing rule files, run `sudo systemctl reload ssdfw.service` to apply them again.
