@@ -58,7 +58,7 @@ no_ipv6() {
     ip6tables -w 3 -A INPUT -j ACCEPT -i lo
     ip6tables -w 3 -A OUTPUT -j ACCEPT -o lo
     if [ "$1" = "--allow-out" ]; then
-        ip6tables -w 3 -A INPUT  -j ACCEPT -m conntrack --ctstate ESTABLISHED,RELATED
+        ip6tables -w 3 -A INPUT -j ACCEPT -m conntrack --ctstate ESTABLISHED,RELATED
         ip6tables -w 3 -A OUTPUT -j ACCEPT
     fi
 }
@@ -93,30 +93,30 @@ EOF
 yn() (
     # shellcheck disable=SC2039
     # shellcheck disable=SC2030
-    read -r -p "$1 [y/N]: " -n 1 a
+    read -r -p "$1 [y/N]: " a
     echo
     case "$a" in
-        y|Y) return 0 ;;
-        *) return 1;;
+        y | Y) return 0 ;;
+        *) return 1 ;;
     esac
 )
 
 # show ssdfw rules
 show() {
     echo "# --------------- NAT IN ------------------------------------------------------"
-    iptables -t nat -S nat_in        | grep -v '^-N\|^-P'
+    iptables -t nat -S nat_in | grep -v '^-N\|^-P'
     echo
     echo "# --------------- IN ----------------------------------------------------------"
     iptables -t mangle -S PREROUTING | grep -v '^-N\|^-P'
     echo
     echo "# --------------- IP FORWARD --------------------------------------------------"
-    iptables -t mangle -S FORWARD    | grep -v '^-N\|^-P'
+    iptables -t mangle -S FORWARD | grep -v '^-N\|^-P'
     echo
     echo "# --------------- OUT ---------------------------------------------------------"
-    iptables -t filter -S OUTPUT     | grep -v '^-N\|^-P'
+    iptables -t filter -S OUTPUT | grep -v '^-N\|^-P'
     echo
     echo "# --------------- NAT OUT -----------------------------------------------------"
-    iptables -t nat -S nat_out       | grep -v '^-N\|^-P'
+    iptables -t nat -S nat_out | grep -v '^-N\|^-P'
 }
 
 # list ssdfw rules
@@ -146,20 +146,20 @@ flush() {
     iptables -P FORWARD DROP
     iptables -P OUTPUT ACCEPT
 
-    iptables -t nat -D PREROUTING -j nat_in   2>/dev/null
-    iptables -t nat -F nat_in                 2>/dev/null
-    iptables -t nat -X nat_in                 2>/dev/null
+    iptables -t nat -D PREROUTING -j nat_in 2> /dev/null
+    iptables -t nat -F nat_in 2> /dev/null
+    iptables -t nat -X nat_in 2> /dev/null
 
     iptables -t mangle -F
     iptables -t mangle -X
 
     iptables -t filter -F INPUT
-    iptables -t filter -F DOCKER-USER         2>/dev/null
+    iptables -t filter -F DOCKER-USER 2> /dev/null
     iptables -t filter -F OUTPUT
 
-    iptables -t nat -D POSTROUTING -j nat_out 2>/dev/null
-    iptables -t nat -F nat_out                2>/dev/null
-    iptables -t nat -X nat_out                2>/dev/null
+    iptables -t nat -D POSTROUTING -j nat_out 2> /dev/null
+    iptables -t nat -F nat_out 2> /dev/null
+    iptables -t nat -X nat_out 2> /dev/null
 
     echo "Done. Use 'ssdfw.sh flush_iptables' to flush ALL IPTABLES rules."
 }
@@ -176,13 +176,13 @@ flush_iptables() {
     ## flush all rules and chains
     for t in $tables; do
         # flush all rules
-        iptables  -w 3 -F -t "$t"
+        iptables -w 3 -F -t "$t"
         ip6tables -w 3 -F -t "$t"
         # delete all chains
-        iptables  -w 3 -X -t "$t"
+        iptables -w 3 -X -t "$t"
         ip6tables -w 3 -X -t "$t"
-    done;
-    unset t;
+    done
+    unset t
     echo "Done. Restart docker to restore its rules."
 }
 
@@ -195,13 +195,12 @@ flush_iptables() {
 echo
 # shellcheck disable=SC2031
 case $1 in
-    show|list|flush|flush_iptables)
+    show | list | flush | flush_iptables)
         # shellcheck disable=SC2046
         $1
         exit 0
         ;;
-    apply)
-        ;;
+    apply) ;;
     "") ;;
     *)
         usage
@@ -211,7 +210,7 @@ esac
 
 # safe run applying rules
 if [ -z "$1" ] && ! grep -q "iptables-apply" "/proc/$PPID/cmdline"; then
-    if which iptables-apply >/dev/null; then
+    if which iptables-apply > /dev/null; then
         echo "Playing safe, running as: 'iptables-apply -c $0'"
         echo
         exec iptables-apply -c "$0"
@@ -225,7 +224,7 @@ ipt="$(which iptables) -w 3" || {
 
 echo "Enabling ip forwarding... (place to sysctl.conf for persistence between reboots)"
 sysctl -w net.ipv4.ip_forward=1
-[ -f /etc/conf.d/iptables ] && \
+[ -f /etc/conf.d/iptables ] &&
     sed -ri 's/^(.*)IPFORWARD=(.*)$/IPFORWARD="yes"/g' /etc/conf.d/iptables
 
 private_networks="0.0.0.0/8,127.0.0.0/8"             # loopback
@@ -250,13 +249,13 @@ $ipt -P OUTPUT ACCEPT
 
 # **** MANGLE
 # add skip bits
-$ipt -t mangle -N skip 2>/dev/null || $ipt -t mangle -F skip
+$ipt -t mangle -N skip 2> /dev/null || $ipt -t mangle -F skip
 $ipt -t mangle -A skip -j MARK --or-mark 0x500
 # remove skip bits
-$ipt -t mangle -N unmark_skip 2>/dev/null || $ipt -t mangle -F unmark_skip
+$ipt -t mangle -N unmark_skip 2> /dev/null || $ipt -t mangle -F unmark_skip
 $ipt -t mangle -A unmark_skip -j MARK --and-mark 0x0FF
 # check_state
-$ipt -t mangle -N check_state 2>/dev/null || $ipt -t mangle -F check_state
+$ipt -t mangle -N check_state 2> /dev/null || $ipt -t mangle -F check_state
 $ipt -t mangle -A check_state -g unmark_skip -m mark --mark 0x500/0x500
 $ipt -t mangle -A check_state -j MARK --set-mark 0xFA -m conntrack --ctstate ESTABLISHED,RELATED
 $ipt -t mangle -A check_state -j ACCEPT -m mark --mark 0xFA/0xFA # accept stateful
@@ -264,26 +263,26 @@ $ipt -t mangle -A check_state -j ACCEPT -m mark --mark 0xFA/0xFA # accept statef
 $ipt -t mangle -A check_state -j MARK --set-mark 0x0 -m addrtype ! --dst-type LOCAL
 $ipt -t mangle -A check_state -j ACCEPT -m addrtype ! --dst-type LOCAL
 # check_fwd_state
-$ipt -t mangle -N check_fwd_state 2>/dev/null || $ipt -t mangle -F check_fwd_state
+$ipt -t mangle -N check_fwd_state 2> /dev/null || $ipt -t mangle -F check_fwd_state
 $ipt -t mangle -A check_fwd_state -g unmark_skip -m mark --mark 0x500/0x500
 $ipt -t mangle -A check_fwd_state -j MARK --set-mark 0xFA -m conntrack --ctstate ESTABLISHED,RELATED
 $ipt -t mangle -A check_fwd_state -j ACCEPT -m mark --mark 0xFA/0xFA # accept stateful
 # allow = ACCEPT
-$ipt -t mangle -N allow 2>/dev/null || $ipt -t mangle -F allow
+$ipt -t mangle -N allow 2> /dev/null || $ipt -t mangle -F allow
 $ipt -t mangle -A allow -g unmark_skip -m mark --mark 0x500/0x500
 $ipt -t mangle -A allow -j MARK --set-mark 0xFA
 $ipt -t mangle -A allow -j ACCEPT
 # ignore - remove from further checks without decision
-$ipt -t mangle -N ignore 2>/dev/null || $ipt -t mangle -F ignore
+$ipt -t mangle -N ignore 2> /dev/null || $ipt -t mangle -F ignore
 $ipt -t mangle -A ignore -j unmark_skip -m mark --mark 0x500/0x500
 $ipt -t mangle -A ignore -j ACCEPT
 # deny = DROP
-$ipt -t mangle -N deny 2>/dev/null || $ipt -t mangle -F deny
+$ipt -t mangle -N deny 2> /dev/null || $ipt -t mangle -F deny
 $ipt -t mangle -A deny -g unmark_skip -m mark --mark 0x500/0x500
 $ipt -t mangle -A deny -j MARK --set-mark 0xFD
 $ipt -t mangle -A deny -j ACCEPT
 # reject (for tcp with tcp-reset)
-$ipt -t mangle -N reject 2>/dev/null || $ipt -t mangle -F reject
+$ipt -t mangle -N reject 2> /dev/null || $ipt -t mangle -F reject
 $ipt -t mangle -A reject -g unmark_skip -m mark --mark 0x500/0x500
 $ipt -t mangle -A reject -j MARK --set-mark 0xFC
 $ipt -t mangle -A reject -j ACCEPT
@@ -301,42 +300,42 @@ fwd="$ipt -t mangle -A FORWARD"
 
 # **** NAT
 # ******** PREROUTING
-$ipt -t nat -N nat_in 2>/dev/null || $ipt -t nat -F nat_in
-$ipt -t nat -D PREROUTING -j nat_in 2>/dev/null
+$ipt -t nat -N nat_in 2> /dev/null || $ipt -t nat -F nat_in
+$ipt -t nat -D PREROUTING -j nat_in 2> /dev/null
 $ipt -t nat -I PREROUTING -j nat_in
 # shellcheck disable=SC2034
 nat_in="$ipt -t nat -A nat_in"
 # ******** POSTROUTING
-$ipt -t nat -N nat_out 2>/dev/null || $ipt -t nat -F nat_out
-$ipt -t nat -D POSTROUTING -j nat_out 2>/dev/null
+$ipt -t nat -N nat_out 2> /dev/null || $ipt -t nat -F nat_out
+$ipt -t nat -D POSTROUTING -j nat_out 2> /dev/null
 $ipt -t nat -I POSTROUTING -j nat_out
 # shellcheck disable=SC2034
 nat_out="$ipt -t nat -A nat_out"
 
 # **** FILTER
 # ******** INPUT
-$ipt -N sshguard 2>/dev/null
+$ipt -N sshguard 2> /dev/null
 $ipt -F INPUT
-$ipt -A INPUT -j DROP     -m mark --mark 0xFD/0xFD # denied
+$ipt -A INPUT -j DROP -m mark --mark 0xFD/0xFD                                  # denied
 $ipt -A INPUT -j REJECT --reject-with tcp-reset -p tcp -m mark --mark 0xFC/0xFC # reject tcp
-$ipt -A INPUT -j REJECT   -m mark --mark 0xFC/0xFC # reject other
-$ipt -A INPUT -j sshguard -p tcp --dport 22   # sshguard
-$ipt -A INPUT -j ACCEPT   -m mark --mark 0xFA/0xFA # allowed
+$ipt -A INPUT -j REJECT -m mark --mark 0xFC/0xFC                                # reject other
+$ipt -A INPUT -j sshguard -p tcp --dport 22                                     # sshguard
+$ipt -A INPUT -j ACCEPT -m mark --mark 0xFA/0xFA                                # allowed
 # log all other in
 $ipt -A INPUT -m comment --comment "Dropped IN"
 
 # ******** FORWARD
 # DOCKER-USER instead of FORWARD
-$ipt -N DOCKER-USER 2>/dev/null || $ipt -F DOCKER-USER
-$ipt -C FORWARD -j DOCKER-USER 2>/dev/null || $ipt -I FORWARD 1 -j DOCKER-USER
-$ipt -A DOCKER-USER -j DROP   -m mark --mark 0xFD/0xFD # denied
+$ipt -N DOCKER-USER 2> /dev/null || $ipt -F DOCKER-USER
+$ipt -C FORWARD -j DOCKER-USER 2> /dev/null || $ipt -I FORWARD 1 -j DOCKER-USER
+$ipt -A DOCKER-USER -j DROP -m mark --mark 0xFD/0xFD                                  # denied
 $ipt -A DOCKER-USER -j REJECT --reject-with tcp-reset -p tcp -m mark --mark 0xFC/0xFC # rejected tcp
-$ipt -A DOCKER-USER -j REJECT -m mark --mark 0xFC/0xFC # rejected other
-$ipt -A DOCKER-USER -j ACCEPT -m mark --mark 0xFA/0xFA # allowed
+$ipt -A DOCKER-USER -j REJECT -m mark --mark 0xFC/0xFC                                # rejected other
+$ipt -A DOCKER-USER -j ACCEPT -m mark --mark 0xFA/0xFA                                # allowed
 # initiated from docker controlled networks (bridges)
 #$ipt -A DOCKER-USER -j RETURN -m conntrack ! --ctstate DNAT -m physdev --physdev-is-in
 $ipt -A DOCKER-USER -j RETURN -i docker+ -m conntrack ! --ctstate DNAT
-$ipt -A DOCKER-USER -j RETURN -i br-+    -m conntrack ! --ctstate DNAT
+$ipt -A DOCKER-USER -j RETURN -i br-+ -m conntrack ! --ctstate DNAT
 # log all other docker-user
 $ipt -A DOCKER-USER -m comment --comment "Dropped IP FORWARD"
 $ipt -A DOCKER-USER -j DROP
